@@ -1,0 +1,35 @@
+---
+title: "Sem2a"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# R markdown practice
+
+* Learning objectives:
+
+1. A good understanding about R markdown. How to render `.html` and `.pdf` files. 
+
+2. Good grasp of syntax like lists, bullet points, headers, etc.
+
+3. Display tables and graphs.
+
+4. Push file to [GitHub](https://github.com/).
+
+# Make a table and a plot
+
+```{r}
+library(MASS)
+library(survival)
+library(knitr)
+dat <- VA
+kable(dat)
+plot(VA)
+```
+
+
+
+
