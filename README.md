@@ -13,7 +13,7 @@ This repository contains my assignment solutions from  **_STAT 540: Statistical 
 |:----------:|:-------------------:|
 | 1 |[Seminar 2a](https://github.com/STAT540-UBC/zz_Li-Jingyiran_STAT540_2020/tree/master/Seminar%202a) |
 | 2 |[Seminar 2b](https://github.com/STAT540-UBC/zz_Li-Jingyiran_STAT540_2020/tree/master/Seminar%202b)|
-| 3 |[Pratice Assignment]()|
+| 3 |[Pratice Assignment](https://github.com/STAT540-UBC/zz_Li-Jingyiran_STAT540_2020/tree/master/Assignments)|
 
 
 <a name="who"/></a>
