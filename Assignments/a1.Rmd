@@ -1,7 +1,6 @@
 ---
 title: "Practice Assignment"
 output: github_document
-
 ---
 
 ```{r setup, include=FALSE}
@@ -14,7 +13,7 @@ See homepage for details.
 
 # Part 2: Data inspection with R
 
-The dataset `Titanic` would be used for this part. 
+The dataset `Titanic` would be used for this part.
 
 ## Part 2.1: Passenger breakdown
 
@@ -32,47 +31,59 @@ dat <- data.frame(Titanic)
 **How many children and adults were on Titanic?**
 
 ```{r}
-child.num <- sum(dat$Age == "Child")
-adult.num <- sum(dat$Age == "Adult")
+child <-filter(dat, dat$Age == "Child")
+child.num <- sum(child$Freq)
+adult <-filter(dat, dat$Age == "Adult")
+adult.num <- sum(adult$Freq)
+child.num; adult.num
 ```
 
-  * There are 16 children and 16 adults on the Titantic.
+  * There are 109 children and 2092 adults on the Titantic.
 
 **Were there more female adult or male adult passengers?**
 
 ```{r}
 # count the number of adults and kids for each sex
-less <- sum(dat$Age == "Adult" & dat$Sex == "Female") <
-  sum(dat$Age == "Adult" & dat$Sex == "Male")
-equal <- sum(dat$Age == "Adult" & dat$Sex == "Female") == 
-  sum(dat$Age == "Adult" & dat$Sex == "Male")
-
-if(equal)
-{print("Equal")} else if (less)
-{print("More female")} else{print("More male")}
+fe.ad <- filter(dat, dat$Sex == "Female" & dat$Age  == "Adult")
+fe.num <- sum(fe.ad$Freq)
+m.ad <- filter(dat, dat$Sex == "Male" & dat$Age  == "Adult")
+m.num <- sum(m.ad$Freq)
+fe.num; m.num
 ```
 
-  * There are equal number of female and male on the ship. 
+  * There are 425 female adults and 1667 male adults on the ship. So, there are more male adults. 
 
 ## Part 2.2: Survival
 
 **Did the children have better survival rate than the adults?**
 ```{r}
-sum(dat$Age == "Child" & dat$Survived == "Yes")
-sum(dat$Age == "Adult" & dat$Survived == "Yes")
+c.sur <- filter(dat, dat$Age == "Child" & dat$Survived == "Yes")
+a.sur <- filter(dat, dat$Age == "Adult" & dat$Survived == "Yes")
+c.rate <- sum(c.sur$Freq)/child.num
+a.rate <- sum(a.sur$Freq)/adult.num
+c.rate; a.rate
 ```
 
-  * 8 individuals survived for both children and adults. Hence survival rate is the same. 
+  * The survival rate for children is around 52.3% whereas that for adults is around 31.3%. Hence, yes, children had a better survival rate than adults.
 
 **Which class of passengers have a better survival rate? (Crew, first class, second class, third class)**
 ```{r}
-dat %>% 
-  group_by(Class) %>% 
-  count(Survived) %>% 
-  kable()
+c1 <- filter(dat, dat$Class == "1st")
+c2 <- filter(dat, dat$Class == "2nd")
+c3 <- filter(dat, dat$Class == "3rd")
+cc <- filter(dat, dat$Class == "Crew")
+c1.s <- filter(c1, c1$Survived == "Yes")
+c2.s <- filter(c2, c2$Survived == "Yes")
+c3.s <- filter(c3, c3$Survived == "Yes")
+cc.s <- filter(cc, cc$Survived == "Yes")
+c1.r <- sum(c1.s$Freq)/sum(c1$Freq)
+c2.r <- sum(c2.s$Freq)/sum(c2$Freq)
+c3.r <- sum(c3.s$Freq)/sum(c3$Freq)
+cc.r <- sum(cc.s$Freq)/sum(cc$Freq)
+c1.r; c2.r; c3.r; cc.r
 ```
 
-* Number of survivers (4 alive) are the same across all 4 classes. 
+* The survival rate for class 1, 2, 3, and crew are 62.5%, 41.4%, 25.2%, 24.1%, respectively. Hence, 1st class passengers have the highest survival rate.  
 
 # Part 3: Data Visualization
 ```{r}
