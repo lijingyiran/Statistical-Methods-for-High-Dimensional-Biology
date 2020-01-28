@@ -1,0 +1,101 @@
+---
+title: "Sem3"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Part 2 Exercise
+```{r, include=F, echo=F, warning=F}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    #install.packages("BiocManager")
+BiocManager::install("GEOquery")
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    #install.packages("BiocManager")
+BiocManager::install("biomaRt")
+library(biomaRt)
+library(GEOquery)
+library(tidyverse)
+library(data.table)
+library(reshape2)
+```
+
+# Part 1
+```{r}
+gds <- getGEO("GDS507")
+meta_data <- data.frame(Sample = gds@dataTable@columns$sample, disease = gds@dataTable@columns$disease.state)
+gds_data <- gds@dataTable@table
+head(gds_data)
+melted_data <- melt(gds_data, id.vars = c("ID_REF", "IDENTIFIER"), var = "Sample")
+head(melted_data)
+melted_data %>% 
+    group_by(Sample) %>% 
+    summarize(mean = mean(value))
+(new_melted_data <- melted_data %>% 
+    group_by(Sample, IDENTIFIER) %>% 
+    summarize(Count = mean(value)))
+```
+
+
+## Part 2 Excerise
+
+```{r, warning=F}
+human = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+
+identify_gene_names <- function(df){
+    names(df) <- c("Sample", "hgnc_symbol", "Count")
+    names <- getBM( attributes=c("hgnc_symbol", "chromosome_name",
+                                 "transcript_length") , filters= "hgnc_symbol", values = unique(df$hgnc_symbol), mart = human)
+    left_join(df, names, by = "hgnc_symbol")
+}
+
+identify_gene_names1 <- function(df){
+    names(df) <- c("Sample", "hgnc_symbol", "Count")
+    names <- getBM( attributes=c("hgnc_symbol", "chromosome_name") , filters= "hgnc_symbol", values = unique(df$hgnc_symbol), mart = human)
+    left_join(df, names, by = "hgnc_symbol")
+}
+
+data_with_chromosome <- identify_gene_names1(new_melted_data) %>% 
+    filter(chromosome_name %in% c(1:23, "X", "Y"))
+
+full_data <- left_join(data_with_chromosome, meta_data, by = "Sample")
+
+full_data %>% 
+    group_by(disease) %>% 
+    filter(chromosome_name == "X") %>% 
+    summarize(mean = mean(Count))
+```
+
+
+# Part 3 Exercise
+```{r, warning=F}
+set.seed(123)
+sample_to_choose <- sample(1:length(unique(full_data$hgnc_symbol)), size = 100)
+
+names_to_choose <- as.character(unique(full_data$hgnc_symbol)[sample_to_choose])
+
+full_data %>% 
+  mutate(prop = Count/sum(Count)) %>% 
+  ggplot(aes(x = as.factor(chromosome_name), y = prop)) + geom_point()
+
+```
+
+
+#Part 4
+```{r}
+withp <- full_data %>% 
+    group_by(hgnc_symbol) %>% 
+    summarize( pvalue = t.test(Count ~ disease)$p.value) 
+
+withp %>%
+    ggplot(aes(pvalue)) + geom_density()
+
+sigdata <- withp %>% filter(pvalue < 0.05)
+sigdata
+
+name <- sigdata[which.min(sigdata$pvalue),1]
+name
+```
+
