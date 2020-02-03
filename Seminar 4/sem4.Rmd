@@ -1,0 +1,224 @@
+---
+title: "Sem4"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,include=F, echo=F, warning=F, message=F}
+library(tidyverse)
+library(reshape2)
+library(knitr)
+library(limma)
+library(data.table)
+```
+
+#Part 2: Gene expression data
+```{r}
+expressionMatrix <- fread("https://raw.githubusercontent.com/STAT540-UBC/STAT540-UBC.github.io/master/seminars/seminars_winter_2020/seminar4/expression_data/GSE4051_data.tsv")
+
+names(expressionMatrix)[1] <- "gene"
+
+samplesMetadata <- fread("https://raw.githubusercontent.com/STAT540-UBC/STAT540-UBC.github.io/master/seminars/seminars_winter_2020/seminar4/expression_data/GSE4051_design.tsv")
+
+names(samplesMetadata) <- c("sample_id", "sample_number", "dev_stage", "genotype")
+
+samplesMetadata$dev_stage <- samplesMetadata$dev_stage %>% factor(levels = c("E16", "P2", "P6", "P10", "4_weeks"))
+
+samplesMetadata$genotype <- samplesMetadata$genotype %>% factor(levels = c("wt", "NrlKO"))
+
+expressionMatrix %>% ncol() - 1
+
+samplesMetadata %>% nrow()
+
+expressionMatrix %>% names() %>% sort()
+samplesMetadata$sample_id %>% sort()
+
+# melt into a format ggplot can easily work with
+meltedExpressionMatrix <- expressionMatrix %>% reshape2::melt(id = "gene") 
+
+```
+
+
+
+#Part 3: Single gene analysis
+```{r}
+geneIds <- c("1416119_at", "1431708_a_at")
+
+# use dplyr::filter() to get the expression data for the gene
+expressionDataForGene <- expressionMatrix %>% filter(gene %in% geneIds)
+
+# transform the data frame into the format that matches the sample metadata
+expressionDataForGene <- expressionDataForGene %>%
+  as.data.frame() %>% 
+  column_to_rownames("gene") %>%
+  t() %>% as.data.frame() %>% 
+  rownames_to_column("sample_id") %>% 
+  reshape2::melt(id = "sample_id") %>% 
+  as_tibble() %>% 
+  select(sample_id,
+         gene = variable, 
+         expression = value)
+
+transformGeneExpressionMatrix <- function(expressionMatrix) {
+  expressionMatrix <- expressionMatrix %>%
+    as.data.frame() %>% 
+    column_to_rownames("gene") %>%
+    t() %>% as.data.frame() %>% 
+    rownames_to_column("sample_id") %>% 
+    reshape2::melt(id = "sample_id") %>% 
+    as_tibble() %>% 
+    select(sample_id,
+           gene = variable, 
+           expression = value)
+  return(expressionMatrix)
+}
+
+expressionDataForGene <- expressionMatrix %>% filter(gene %in% geneIds)
+
+expressionDataForGene <- transformGeneExpressionMatrix(expressionDataForGene)
+
+
+expressionDataForGene <- expressionDataForGene %>% left_join(samplesMetadata, by = "sample_id")
+
+
+boringGene <- expressionDataForGene %>% filter(gene == "1416119_at")
+t.test(expression ~ genotype, boringGene)
+
+interestingGene <- expressionDataForGene %>% filter(gene == "1431708_a_at")
+summary(lm(expression ~ genotype, interestingGene))
+
+interestingGene <- expressionDataForGene %>% filter(gene == "1431708_a_at")
+summary(aov(expression ~ dev_stage, interestingGene))
+```
+
+#Part 4: Lots of Genes
+```{r, warning=F}
+wildTypeSamples <- samplesMetadata %>% filter(genotype == "wt")
+
+getExpressionForSamples <- function(sampleIds, expressionMatrix) {
+  # use gene column as row name
+  dataFrame <- expressionMatrix %>% 
+    as.data.frame() %>% 
+    column_to_rownames("gene")
+  # use give sampleIds to pull out the subset of interest (ORDERING OF SAMPLES IS VERY IMPORTANT)
+  return(dataFrame[sampleIds])
+}
+
+# use the wildTypeSamples to pull out the wildtype expression data from the expression matrix
+wildTypeExpressionMatrix <- getExpressionForSamples(wildTypeSamples$sample_id, expressionMatrix)
+
+wildTypeExpressionMatrix %>% as_tibble()
+
+designMatrix <- model.matrix(~dev_stage, wildTypeSamples)
+
+wildTypeDevStageFit <- lmFit(wildTypeExpressionMatrix, designMatrix)
+wildTypeDevStageFitEb <- eBayes(wildTypeDevStageFit)
+topTenGenes <- topTable(wildTypeDevStageFitEb)
+topGenes <- rownames(topTenGenes)[1:6]
+topGenesExpressionData <- wildTypeExpressionMatrix %>% 
+  rownames_to_column("gene") %>% 
+  filter(gene %in% topGenes) %>%
+  transformGeneExpressionMatrix() %>% 
+  left_join(wildTypeSamples, id = "sample_id")
+
+topGenesExpressionData %>% 
+  ggplot(aes(x = dev_stage, y = expression, color = genotype)) +
+  geom_point() +
+  geom_jitter() +
+  stat_summary(aes(y = expression, group=1), fun.y = mean, geom="line") +
+  facet_wrap(~gene)
+
+plotGenes <- function(genes, expressionMatrix, samplesMetadata) {
+  
+  expressionDataForGenes <- expressionMatrix %>% 
+    rownames_to_column("gene") %>% 
+    filter(gene %in% genes) %>%
+    transformGeneExpressionMatrix() %>% 
+    left_join(samplesMetadata, id = "sample_id")
+  
+  expressionDataForGenes %>% 
+    ggplot(aes(x = dev_stage, y = expression, color = genotype)) +
+    geom_point() +
+    geom_jitter() +
+    stat_summary(aes(y = expression, group=1), fun.y = mean, geom="line") +
+    facet_wrap(~gene)
+}
+
+# verify that the function works
+plotGenes(topGenes, wildTypeExpressionMatrix, wildTypeSamples)
+allGenes <- topTable(wildTypeDevStageFitEb, number = Inf)
+
+# construct the contrast matrix
+contrastMatrix <- makeContrasts(
+  p10vsp6 = dev_stageP10 - dev_stageP6,
+  fourweeksVsP10 = dev_stage4_weeks - dev_stageP10,
+  levels = designMatrix
+)
+
+contrastFit <- contrasts.fit(wildTypeDevStageFit, contrastMatrix)
+contrastFitEb <- eBayes(contrastFit)
+contrastGenes <- topTable(contrastFitEb)
+cutoff <- 1e-04
+wtResCont <- decideTests(contrastFitEb, p.value = cutoff, method = "global")
+
+
+hits1 <- wtResCont %>% 
+  as.data.frame() %>% 
+  rownames_to_column("gene") %>% 
+  filter(p10vsp6 < 0)
+plotGenes(hits1$gene, wildTypeExpressionMatrix, wildTypeSamples)
+
+
+hits2 <- wtResCont %>% 
+  as.data.frame() %>% 
+  rownames_to_column("gene") %>% 
+  filter(fourweeksVsP10 < 0)
+
+interactionSamples <- samplesMetadata %>% filter(dev_stage %in% c("E16", "4_weeks"))
+interactionSamples$dev_stage <- interactionSamples$dev_stage %>% 
+  as.character() %>% 
+  factor(levels = c("E16", "4_weeks"))
+
+expressionDataForInteractionSamples <- getExpressionForSamples(interactionSamples$sample_id, expressionMatrix)
+
+interactionDesign <- model.matrix(~genotype*dev_stage, interactionSamples)
+
+```
+
+
+# Part 5
+## Make a similar plot but this time for 4 genes where there are no interaction between genotype and developmental stages.
+```{r}
+set.seed(123456)
+interactionFit <- lmFit(expressionDataForInteractionSamples, interactionDesign) %>% eBayes()
+
+cutoff <- 1e-06
+changeDirections <- decideTests(interactionFit, p.value = cutoff, method = "global") %>% 
+  as.data.frame() %>% 
+  rownames_to_column("gene") %>% 
+  as_tibble()
+
+hits <- changeDirections %>% filter(dev_stage4_weeks < 0, `genotypeNrlKO:dev_stage4_weeks` == 0)
+
+# lets try plotting 5 on this list
+
+expressionDataForHits <- expressionDataForInteractionSamples %>% 
+  rownames_to_column("gene") %>% 
+  filter(gene %in% hits$gene[1:4]) %>%
+  transformGeneExpressionMatrix() %>% 
+  left_join(samplesMetadata, id = "sample_id")
+
+expressionDataForHits$dev_stage <- expressionDataForHits$dev_stage %>% as.numeric()
+
+expressionDataForHits %>%
+  ggplot(aes(x = dev_stage, y = expression, color = genotype)) +
+  geom_point() +
+  geom_jitter() +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~gene)
+```
+
+
