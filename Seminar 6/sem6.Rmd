@@ -98,7 +98,9 @@ pheatmap(topDat, cluster_rows = TRUE, scale = clust_scale,
 
 ```
 
+
 #Deliverable 2
+
 ## Regenerate the dendrogram on the SAMPLES of this heatmap using the 'hclust' and 'dist' functions.
 
 K-means clustering:
