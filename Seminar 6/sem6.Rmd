@@ -121,7 +121,9 @@ geneC.hc.a <- hclust(geneC.dis, method = "mcquitty")
 plot(geneC.hc.a, labels = F, main = "Hierarchical with Average Linkage", xlab = "")
 ```
 
-#Deliverable 3
+
+# Deliverable 3
+
 ## Plot the data for this analysis along PCs 1 and 2 using `ggplot` instead base plotting. Color the points by tissue.
 
 ```{r}

@@ -119,8 +119,9 @@ plot(geneC.hc.a, labels = F, main = "Hierarchical with Average Linkage", xlab = 
 
 ![](sem6_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
-\#Deliverable 3 \#\# Plot the data for this analysis along PCs 1 and 2
-using `ggplot` instead base plotting. Color the points by tissue.
+# Deliverable 3
+
+## Plot the data for this analysis along PCs 1 and 2 using `ggplot` instead base plotting. Color the points by tissue.
 
 ``` r
 pcs <- prcomp(sprDat, center = FALSE, scale = FALSE)
