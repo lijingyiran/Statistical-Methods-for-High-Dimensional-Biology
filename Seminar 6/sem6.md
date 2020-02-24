@@ -95,8 +95,7 @@ pheatmap(topDat, cluster_rows = TRUE, scale = clust_scale,
 
 ![](sem6_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
 
-\#Deliverable
-2
+# Deliverable 2
 
 ## Regenerate the dendrogram on the SAMPLES of this heatmap using the ‘hclust’ and ‘dist’ functions.
 
